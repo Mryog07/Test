@@ -1,67 +1,70 @@
-const shops = [
-    { name: "जय भवानी मोबाईल्स", category: "Cat14", phone: "9876543210", address: "बाजार चौक, मंगळवेढा", isVerified: true, offer: "दिवाळी धमाका: नवीन मोबाईलवर कव्हर आणि ग्लास मोफत!" },
-    { name: "रोहित भगत डिजिटल", category: "Cat42", phone: "9876543213", address: "खंडोबा गल्ली, मंगळवेढा", isVerified: true, offer: "" },
-    { name: "गणेश सुपर मार्केट", category: "Cat1", phone: "9876543211", address: "बस स्टँड जवळ, मंगळवेढा", isVerified: true, offer: "किराण्यावर 10% डिस्काउंट" },
-    { name: "आशिष इस्टेट्स (रूम भाड्याने)", category: "Cat20", phone: "9876543222", address: "शिवाजी नगर, मंगळवेढा", isVerified: true, offer: "" },
-    { name: "सुभाष प्लंबिंग आणि इलेक्ट्रिकल्स", category: "Cat19", phone: "9876543333", address: "दत्तू गल्ली, मंगळवेढा", isVerified: true, offer: "24 तास सेवा उपलब्ध" },
-    { name: "संजीवनी मेडिकल", category: "Cat11", phone: "9876543111", address: "दत्तू गल्ली, मंगळवेढा", isVerified: false, offer: "" }
-];
+// ========== संपूर्ण दुकाने लिस्ट ==========
+function displayShops(shopArray) {
+    shopList.innerHTML = "";
+    const totalCountEl = document.getElementById('totalShopsCount');
+    if (totalCountEl) totalCountEl.innerText = shops.length;
 
-let currentCategory = 'All';
-let showingOffersOnly = false;
-const shopList = document.getElementById('shopList');
-const searchInput = document.getElementById('searchInput');
-const sectionHeading = document.getElementById('sectionHeading');
+    if(shopArray.length === 0) {
+        shopList.innerHTML = `<p style="text-align:center; color:#6b7280; margin-top:30px;">माहिती आढळली नाही.</p>`;
+        return;
+    }
+    shopArray.forEach(shop => {
+        const card = document.createElement('div');
+        card.className = "shop-card";
 
-const categoryImages = {
-    "Cat1": "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&q=70",
-    "Cat2": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=70",
-    "Cat9": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=70",
-    "Cat10": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&q=70",
-    "Cat11": "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&q=70",
-    "Cat14": "https://images.unsplash.com/photo-1556740758-90de374c12ad?w=400&q=70",
-    "Cat17": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=70",
-    "Cat19": "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&q=70",
-    "Cat20": "https://images.unsplash.com/photo-1560184897-ae75f418493e?w=400&q=70",
-    "Cat24": "https://images.unsplash.com/photo-1545468259-05d8c4a62b3d?w=400&q=70",
-    "Cat42": "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&q=70",
-    "default": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png"
-};
-
-function getShopImage(category) {
-    return categoryImages[category] || categoryImages["default"];
-}
-
-// ========== लोकप्रिय दुकाने (फोटोसह) ==========
-function renderPopularShops() {
-    const container = document.getElementById('popularShopsList');
-    if (!container) return;
-
-    const popular = [...shops].sort((a,b) => (b.isVerified - a.isVerified)).slice(0, 4);
-
-    container.innerHTML = popular.map(shop => {
         const verifiedHTML = shop.isVerified ? `<i class="fa-solid fa-circle-check verified-tick"></i>` : '';
+        const offerHTML = shop.offer ? `<div class="offer-tag"><i class="fa-solid fa-gift"></i> ${shop.offer}</div>` : '';
 
         const ratingHTML = shop.rating ? `<span class="rating"><i class="fa-solid fa-star"></i> ${shop.rating} (${shop.reviews || 0})</span>` : '';
         const distanceHTML = shop.distance ? `<span><i class="fa-solid fa-location-dot"></i> ${shop.distance} कि.मी</span>` : '';
-        const metaHTML = (ratingHTML || distanceHTML) ? `<div class="pshop-meta">${ratingHTML} ${distanceHTML}</div>` : '';
+        const metaHTML = (ratingHTML || distanceHTML) ? `<div class="shop-meta">${ratingHTML} ${distanceHTML}</div>` : '';
 
-        const callBtn = shop.phone ? `<a href="tel:${shop.phone}" class="btn-call"><i class="fa-solid fa-phone"></i> कॉल</a>` : '';
-        const dirBtn = shop.address ? `<a href="https://maps.google.com/?q=${shop.name}, ${shop.address}" target="_blank" class="btn-direction"><i class="fa-solid fa-location-arrow"></i> दिशा</a>` : '';
-        const buttonsHTML = (callBtn || dirBtn) ? `<div class="pshop-buttons" style="margin-top: 10px;">${callBtn} ${dirBtn}</div>` : '';
+        const callButton = shop.phone ? `<a href="tel:${shop.phone}" class="btn btn-call"><i class="fa-solid fa-phone-volume"></i> कॉल</a>` : '';
+        const dirButton = shop.address ? `<a href="https://maps.google.com/?q=${shop.name}, ${shop.address}" target="_blank" class="btn btn-direction"><i class="fa-solid fa-map-location-dot"></i> दिशा</a>` : '';
+        const buttonsHTML = (callButton || dirButton) ? `<div class="card-buttons">${callButton} ${dirButton}</div>` : '';
 
-        return `
-            <div class="pshop-card">
-                <div class="pshop-img-wrap">
-                    <img src="${getShopImage(shop.category)}" alt="${shop.name}">
-                    <span class="pshop-fav" onclick="toggleFav(this, event)"><i class="fa-regular fa-heart"></i></span>
+        card.innerHTML = `
+            <div class="shop-img-box">
+                <div class="shop-avatar"><img src="${getShopImage(shop.category)}" alt="${shop.name}"></div>
+                <i class="fa-regular fa-heart fav-icon" onclick="toggleFav(this, event)"></i>
+            </div>
+            <div class="shop-info">
+                <div class="shop-name">${shop.name} ${verifiedHTML}</div>
+                ${metaHTML}
+                <div class="shop-details" ${!metaHTML ? 'style="margin-top: 8px;"' : ''}>
+                    <p><i class="fa-solid fa-map-pin"></i> ${shop.address}</p>
                 </div>
-                <div class="pshop-info">
-                    <h4>${shop.name} ${verifiedHTML}</h4>
-                    ${metaHTML}
-                    ${buttonsHTML}
-                </div>
+                ${offerHTML}
+                ${buttonsHTML}
             </div>
         `;
-    }).join('');
+        shopList.appendChild(card);
+    });
+}
+
+function toggleFav(el, event) {
+    event.stopPropagation();
+    const icon = el.querySelector('i') || el;
+    icon.classList.toggle('fa-regular');
+    icon.classList.toggle('fa-solid');
+}
+
+function filterCategory(category, element) {
+    showingOffersOnly = false;
+    currentCategory = category;
+    sectionHeading.innerHTML = `<i class="fa-solid fa-list"></i> सर्व दुकाने आणि सेवा`;
+    document.querySelectorAll('.cat-item').forEach(chip => chip.classList.remove('active'));
+    if(element) { element.classList.add('active'); } 
+    else { document.getElementById('cat-all').classList.add('active'); }
+    applyFilters();
+    document.getElementById('shopList').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function showOffers() {
+    showingOffersOnly = true;
+    currentCategory = 'All';
+    document.querySelectorAll('.cat-item').forEach(chip => chip.classList.remove('active'));
+    sectionHeading.innerHTML = `<i class="fa-solid fa-tags" style="color:red;"></i> आजच्या लाईव्ह ऑफर्स`;
+    applyFilters();
+    document.getElementById('shopList').scrollIntoView({behavior:'smooth', block:'start'});
 }
