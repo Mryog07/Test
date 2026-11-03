@@ -1,263 +1,122 @@
-        const ratingHTML = shop.rating ? `<span class="rating"><i class="fa-solid fa-star"></i> ${shop.rating} (${shop.reviews || 0})</span>` : '';
-        const distanceHTML = shop.distance ? `<span><i class="fa-solid fa-location-dot"></i> ${shop.distance} कि.मी</span>` : '';
-        const metaHTML = (ratingHTML || distanceHTML) ? `<div class="shop-meta">${ratingHTML} ${distanceHTML}</div>` : '';
+/* ---------- STATE ---------- */
+let favs = [];
+try { favs = JSON.parse(localStorage.getItem('mi_favs') || '[]'); } catch (e) { favs = []; }
+const state = { cat: null, favs: false, all: false };
 
-        const callButton = shop.phone ? `<a href="tel:${shop.phone}" class="btn btn-call"><i class="fa-solid fa-phone-volume"></i> कॉल</a>` : '';
-        const dirButton = shop.address ? `<a href="https://maps.google.com/?q=${shop.name}, ${shop.address}" target="_blank" class="btn btn-direction"><i class="fa-solid fa-map-location-dot"></i> दिशा</a>` : '';
-        const buttonsHTML = (callButton || dirButton) ? `<div class="card-buttons">${callButton} ${dirButton}</div>` : '';
+function resetState() { state.cat = null; state.favs = false; state.all = false; }
+function updateClearBtn() { const b = $('clearSearch'); if (b) b.style.display = val('searchInput') ? 'flex' : 'none'; }
 
-        card.innerHTML = `
-            <div class="shop-img-box">
-                <div class="shop-avatar"><img src="${getShopImage(shop.category)}" alt="${shop.name}"></div>
-                <i class="fa-regular fa-heart fav-icon" onclick="toggleFav(this, event)"></i>
-            </div>
-            <div class="shop-info">
-                <div class="shop-name">${shop.name} ${verifiedHTML}</div>
-                ${metaHTML}
-                <div class="shop-details" ${!metaHTML ? 'style="margin-top: 8px;"' : ''}>
-                    <p><i class="fa-solid fa-map-pin"></i> ${shop.address}</p>
-                </div>
-                ${offerHTML}
-                ${buttonsHTML}
-            </div>
-        `;
-        shopList.appendChild(card);
-    });
+function setNav(name) {
+  document.querySelectorAll('.bottom-nav [data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+}
+function scrollToList() {
+  const el = $('listSection'); if (!el) return;
+  window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - 150), behavior: 'smooth' });
 }
 
-function toggleFav(el, event) {
-    event.stopPropagation();
-    const icon = el.querySelector('i') || el;
-    icon.classList.toggle('fa-regular');
-    icon.classList.toggle('fa-solid');
-}
-
-function filterCategory(category, element) {
-    showingOffersOnly = false;
-    currentCategory = category;
-    sectionHeading.innerHTML = `<i class="fa-solid fa-list"></i> सर्व दुकाने आणि सेवा`;
-    document.querySelectorAll('.cat-item').forEach(chip => chip.classList.remove('active'));
-    if(element) { element.classList.add('active'); } 
-    else { document.getElementById('cat-all').classList.add('active'); }
-    applyFilters();
-    document.getElementById('shopList').scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-function showOffers() {
-    showingOffersOnly = true;
-    currentCategory = 'All';
-    document.querySelectorAll('.cat-item').forEach(chip => chip.classList.remove('active'));
-    sectionHeading.innerHTML = `<i class="fa-solid fa-tags" style="color:red;"></i> आजच्या लाईव्ह ऑफर्स`;
-    applyFilters();
-    document.getElementById('shopList').scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-// ========== होम पेज घटक लपवणे / दाखवणे ==========
-// (जेव्हा युजर सर्च करेल तेव्हा हे फंक्शन बाकीचे घटक लपवेल)
-function toggleHomePageElements(isSearching) {
-    const displayStyle = isSearching ? 'none' : '';
-    
-    const elementsToHide = [
-        document.querySelector('.category-wrapper'),
-        document.querySelector('.quick-features'),
-        document.querySelector('.popular-services'),
-        document.getElementById('popularShopsList')
-    ];
-    
-    elementsToHide.forEach(el => {
-        if (el) el.style.display = displayStyle;
-    });
-
-    // लपवायचे टायटल्स (लोकप्रिय सेवा आणि लोकप्रिय दुकाने)
-    const sectionTitles = document.querySelectorAll('.section-title');
-    if (sectionTitles.length >= 3) {
-        sectionTitles[0].style.display = displayStyle; // लोकप्रिय सेवा
-        sectionTitles[1].style.display = displayStyle; // लोकप्रिय दुकाने
-    }
-}
-
-// ========== सुधारित स्मार्ट फिल्टर ==========
 function applyFilters() {
-    let rawTerm = searchInput.value.toLowerCase().trim();
-    let searchTerm = searchDictionary[rawTerm] ? searchDictionary[rawTerm] : rawTerm;
-    
-    // सर्च चालू असल्यास फक्त लिस्ट दाखवा, बाकी लपवा
-    if (rawTerm.length > 0) {
-        toggleHomePageElements(true);
-        sectionHeading.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> शोध निकाल (Search Results)`;
-    } else {
-        toggleHomePageElements(false);
-        if (showingOffersOnly) {
-            sectionHeading.innerHTML = `<i class="fa-solid fa-tags" style="color:red;"></i> आजच्या लाईव्ह ऑफर्स`;
-        } else {
-            sectionHeading.innerHTML = `<i class="fa-solid fa-list"></i> सर्व दुकाने आणि सेवा`;
-        }
-    }
+  const q = norm(val('searchInput'));
+  const isHome = !state.cat && !state.favs && !state.all && !q;
+  ['homeSections', 'aboutSection', 'heroExtra'].forEach(id => { if ($(id)) $(id).hidden = !isHome; });
+  if ($('listSection')) $('listSection').hidden = isHome;
+  if ($('clearFilterBtn')) $('clearFilterBtn').hidden = isHome;
+  renderHomeTiles();
+  renderHomeBlocks();
+  if (isHome) return;
 
-    let searchNoVowels = rawTerm.replace(/[aeiou\s]/g, ""); 
+  let list = shops.slice();
+  let title = 'सर्व दुकाने';
+  if (state.favs) { list = list.filter(s => favs.includes(s.phone)); title = 'आवडती दुकाने'; }
+  else if (state.cat) { list = list.filter(s => s.cat === state.cat); title = catOf(state.cat).name; }
+  if (q) {
+    const toks = q.split(' ').filter(Boolean);
+    list = list.filter(s => toks.every(t => tokenMatch(s, t)));
+    title = '“' + val('searchInput') + '” साठी निकाल';
+  }
+  if ($('sectionHeading')) $('sectionHeading').textContent = title + ' (' + list.length + ')';
 
-    const filtered = shops.filter(shop => {
-        // १. मराठीत नॉर्मल सर्च आणि डिक्शनरी सर्च चेक करणे
-        const normalString = `${shop.name} ${shop.address} ${shop.offer || ""} ${shop.category}`.toLowerCase();
-        let matchesSearch = normalString.includes(searchTerm);
-
-        // २. जर मराठीत नाही सापडले, तर ऑटो-कन्व्हर्ट करून इंग्लिशमध्ये शोधणे
-        if (!matchesSearch && searchNoVowels.length > 0) {
-            let autoEng = getAutoEnglish(shop.name);
-            let shopNoVowels = autoEng.replace(/[aeiou\s]/g, ""); // दुकानाच्या नावातील स्वर काढणे
-            
-            // जर मुख्य अक्षरे मॅच झाली (उदा. gnesh आणि gnsh)
-            if (shopNoVowels.includes(searchNoVowels)) {
-                matchesSearch = true;
-            }
-        }
-
-        const matchesCategory = currentCategory === 'All' || shop.category === currentCategory;
-        const matchesOffer = showingOffersOnly ? shop.offer && shop.offer.trim() !== "" : true;
-        return matchesSearch && matchesCategory && matchesOffer;
-    });
-    
-    displayShops(filtered);
+  if (!list.length) {
+    const msg = state.favs ? 'अजून कोणतीही आवडती दुकाने नाहीत.' : 'या विभागात अजून दुकाने जोडलेली नाहीत.';
+    setHTML('shopList', `<div class="empty"><i class="fa-regular fa-face-smile"></i>${msg}<br><button onclick="openModal()">तुमचा व्यवसाय जोडा</button></div>`);
+  } else setHTML('shopList', list.map(shopCard).join(''));
 }
 
-function openSideMenu() {
-    document.getElementById('sideMenu').classList.add('active');
-    document.getElementById('menuOverlay').classList.add('active');
-}
-function closeSideMenu() {
-    document.getElementById('sideMenu').classList.remove('active');
-    document.getElementById('menuOverlay').classList.remove('active');
-}
-
-const timetableModal = document.getElementById("timetableModal");
-function showTimetable() { timetableModal.style.display = "block"; }
-function closeTimetable() { timetableModal.style.display = "none"; }
-
-const modal = document.getElementById("shopModal");
-function openModal() { 
-    modal.style.display = "block"; 
-    const catSelect = document.getElementById("newCategory");
-    if (currentCategory !== 'All' && currentCategory.startsWith('Cat')) {
-        catSelect.value = currentCategory;
-    } else {
-        catSelect.value = "";
-    }
-    updateSubCategories();
-}
-function closeModal() { modal.style.display = "none"; }
-
-function updateSubCategories() {
-    const mainCat = document.getElementById("newCategory").value;
-    const subCatDropdown = document.getElementById("newSubCategory");
-    const customInput = document.getElementById("customCategoryInput");
-    subCatDropdown.innerHTML = '<option value="" disabled selected>उपकॅटेगरी निवडा...</option>';
-    customInput.style.display = "none";
-    customInput.value = "";
-
-    if(subCategoriesData[mainCat]) {
-        subCategoriesData[mainCat].forEach(sub => {
-            const opt = document.createElement("option");
-            opt.value = sub;
-            opt.innerText = sub;
-            subCatDropdown.appendChild(opt);
-        });
-        const otherOpt = document.createElement("option");
-        otherOpt.value = "Other";
-        otherOpt.innerText = "➕ इतर (स्वतः टाईप करा)";
-        subCatDropdown.appendChild(otherOpt);
-        subCatDropdown.style.display = "block";
-    } else {
-        subCatDropdown.style.display = "none";
-    }
+function filterCategory(id) { resetState(); state.cat = id; if ($('searchInput')) $('searchInput').value = ''; updateClearBtn(); applyFilters(); setNav('none'); scrollToList(); }
+function showFavs() { resetState(); state.favs = true; if ($('searchInput')) $('searchInput').value = ''; updateClearBtn(); applyFilters(); setNav('none'); scrollToList(); }
+function showAll() { resetState(); state.all = true; if ($('searchInput')) $('searchInput').value = ''; updateClearBtn(); applyFilters(); setNav('none'); scrollToList(); }
+function searchByKeyword(k) { resetState(); if ($('searchInput')) $('searchInput').value = k; updateClearBtn(); applyFilters(); setNav('none'); scrollToList(); }
+function clearFilters() { resetState(); if ($('searchInput')) $('searchInput').value = ''; updateClearBtn(); applyFilters(); setNav('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function clearSearchBox() { clearFilters(); }
+function goHome() { closeMore(); closeSideMenu(); clearFilters(); }
+function doSearch() {
+  resetState(); updateClearBtn(); applyFilters();
+  if ($('searchInput')) $('searchInput').blur();
+  if (val('searchInput')) { setNav('none'); scrollToList(); }
 }
 
-function checkCustomCategory() {
-    const subCat = document.getElementById("newSubCategory").value;
-    const customInput = document.getElementById("customCategoryInput");
-    customInput.style.display = subCat === "Other" ? "block" : "none";
+function handleAction(type, value) {
+  if (type !== 'more') closeMore();
+  switch (type) {
+    case 'cat': filterCategory(value); break;
+    case 'search': searchByKeyword(value); break;
+    case 'bus': showTimetable(); break;
+    case 'emergency': openEmergency(); break;
+    case 'more': openMore(); break;
+    case 'favs': showFavs(); break;
+    case 'add': openModal(); break;
+    case 'all': showAll(); break;
+  }
 }
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (el) handleAction(el.dataset.act, el.dataset.val);
+});
 
-function submitShop() {
-    const name = document.getElementById("newShopName").value;
-    const phone = document.getElementById("newPhone").value;
-    
-    // मॅप लिंक घेणे
-    const mapLinkInput = document.getElementById("newMapLink");
-    const mapLink = (mapLinkInput && mapLinkInput.value !== "") ? mapLinkInput.value : "लोकेशन दिलेली नाही";
-
-    if(name === "" || phone === "") {
-        alert("कृपया दुकानाचे नाव आणि मोबाईल नंबर नक्की टाका!");
-        return;
-    }
-    
-    alert(`माहिती यशस्वीरित्या पाठवली!\nदुकान: ${name}\nमॅप लिंक: ${mapLink}\nॲडमिन तपासून ॲपवर ॲड करतील.`);
-    closeModal();
+/* ---------- RENDER ---------- */
+function mapLinkOf(s) {
+  return s.mapLink || 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' मंगळवेढा');
 }
-
-searchInput.addEventListener('input', applyFilters);
-renderPopularShops();
-displayShops(shops);
-
-// ========== सर्व कॅटेगरीज कार्ड स्वरूपात दाखवणे ==========
-const allCategoriesList = [
-    { id: "Cat1", name: "किराणा व धान्य", sub: "सुपरमार्केट | मिनी मार्केट" },
-    { id: "Cat2", name: "कपडे व फॅशन", sub: "पुरुष | महिला | मुले" },
-    { id: "Cat9", name: "कृषी व शेती साहित्य", sub: "बियाणे | अवजारे | खते" },
-    { id: "Cat10", name: "वाहन व ऑटोमोबाईल", sub: "दुचाकी | गॅरेज | पार्ट्स" },
-    { id: "Cat11", name: "मेडिकल व दवाखाने", sub: "औषधे | हेल्थ केअर" },
-    { id: "Cat14", name: "मोबाईल व कॉम्पुटर", sub: "नवीन | रिपेअर | सर्व्हिस" },
-    { id: "Cat17", name: "हॉटेल व रेस्टॉरंट", sub: "नाश्ता | जेवण | स्नॅक्स" },
-    { id: "Cat19", name: "कामगार व सर्व्हिस", sub: "प्लंबर | इलेक्ट्रिशियन | सुतार" },
-    { id: "Cat20", name: "रूम व घर भाड्याने", sub: "घरे | दुकान जागा | जमीन" },
-    { id: "Cat24", name: "दुग्धव्यवसाय व पशुपालन", sub: "डेअरी | पशुखाद्य" },
-    { id: "Cat42", name: "प्रिंटिंग व झेरॉक्स", sub: "डिजिटल प्रिंट | झेरॉक्स" },
-    { id: "OtherMain", name: "इतर सर्व व्यवसाय", sub: "इतर सेवा पहा" }
-];
-
-function showAllCategoriesCards() {
-    const popularSection = document.querySelector('.popular-services');
-    if (!popularSection) return;
-
-    popularSection.innerHTML = allCategoriesList.map(cat => `
-        <div class="service-card" onclick="filterCategory('${cat.id}', null)">
-            <div class="service-img-wrap">
-                <img src="${getShopImage(cat.id)}" alt="${cat.name}">
-                <span class="card-arrow"><i class="fa-solid fa-chevron-right"></i></span>
-            </div>
-            <div class="service-card-info">
-                <h4>${cat.name}</h4>
-                <p>${cat.sub}</p>
-            </div>
+function shopCard(s) {
+  const c = catOf(s.cat), img = shopImg(s), fav = favs.includes(s.phone);
+  const wa = 'https://wa.me/91' + s.phone + '?text=' + encodeURIComponent('नमस्कार, मी Mangalwedha Info वरून तुमचा नंबर पाहिला.');
+  const pic = img ? `<img src="${esc(img)}" alt="${esc(s.name)}" loading="lazy" style="position:absolute;inset:0" onerror="this.remove()">` : '';
+  return `<article class="shop-card">
+    <div class="shop-main">
+      <div class="shop-img ${c.color}" style="position:relative"><i class="fa-solid ${c.icon}"></i>${pic}</div>
+      <div class="shop-body">
+        <div class="shop-top">
+          <div class="shop-name">${esc(s.name)}</div>
+          <button class="fav-btn ${fav ? 'on' : ''}" onclick="toggleFav('${esc(s.phone)}')" aria-label="आवडते"><i class="fa-${fav ? 'solid' : 'regular'} fa-heart"></i></button>
         </div>
-    `).join('');
-
-    const sectionTitle = popularSection.previousElementSibling.querySelector('h3');
-    if (sectionTitle) {
-        sectionTitle.innerHTML = `<i class="fa-solid fa-store"></i> सर्व कॅटेगरीज`;
-    }
-
-    popularSection.scrollIntoView({behavior:'smooth', block:'start'});
+        ${s.verified ? '<span class="verified"><i class="fa-solid fa-circle-check"></i> Verified</span>' : ''}
+        <div class="shop-meta">
+          <span><i class="fa-solid fa-location-dot"></i>${esc(s.area)}, मंगळवेढा</span>
+          ${s.distance ? `<span><i class="fa-solid fa-route"></i>${esc(s.distance)}</span>` : ''}
+        </div>
+        <span class="badge ${c.color}">${esc(s.sub || c.name)}</span>
+      </div>
+    </div>
+    <div class="shop-actions">
+      <a class="btn-call" href="tel:${esc(s.phone)}"><i class="fa-solid fa-phone"></i> कॉल</a>
+      <a class="btn-dir" href="${esc(mapLinkOf(s))}" target="_blank" rel="noopener"><i class="fa-solid fa-location-arrow"></i> दिशा</a>
+      <a class="btn-wa" href="${esc(wa)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+    </div>
+  </article>`;
 }
-
-function getCurrentLocation() {
-    const mapLinkInput = document.getElementById("newMapLink");
-    mapLinkInput.value = "लोकेशन शोधत आहे... कृपया थांबा.";
-
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                const gmapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-                mapLinkInput.value = gmapUrl;
-                alert("लोकेशन यशस्वीरित्या मिळवली!");
-            },
-            (error) => {
-                mapLinkInput.value = "";
-                alert("लोकेशन मिळवता आली नाही. कृपया तुमच्या फोनची लोकेशन (GPS) चालू करा आणि पुन्हा प्रयत्न करा.");
-            }
-        );
-    } else {
-        alert("तुमचा ब्राउझर लोकेशन सपोर्ट करत नाही.");
-    }
+/* Home वरील छोटे दुकान कार्ड (2 रांगा) */
+function miniShopCard(s) {
+  const c = catOf(s.cat), img = shopImg(s), fav = favs.includes(s.phone);
+  const pic = img ? `<img src="${esc(img)}" alt="${esc(s.name)}" loading="lazy" onerror="this.remove()">` : '';
+  return `<article class="fs-card">
+    <div class="fs-img ${c.color}"><i class="fa-solid ${c.icon}"></i>${pic}
+      <button class="fs-fav ${fav ? 'on' : ''}" onclick="toggleFav('${esc(s.phone)}')" aria-label="आवडते"><i class="fa-${fav ? 'solid' : 'regular'} fa-heart"></i></button>
+    </div>
+    <div class="fs-body">
+      <div class="fs-name">${esc(s.name)}${s.verified ? '<i class="fa-solid fa-circle-check"></i>' : ''}</div>
+      <div class="fs-btns">
+        <a class="btn-call" href="tel:${esc(s.phone)}"><i class="fa-solid fa-phone"></i> कॉल</a>
+        <a class="btn-dir" href="${esc(mapLinkOf(s))}" target="_blank" rel="noopener"><i class="fa-solid fa-location-arrow"></i> दिशा</a>
+      </div>
+    </div>
+  </article>`;
 }
